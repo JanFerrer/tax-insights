@@ -1,10 +1,10 @@
-# SEC Insights 🏦
+# TAX Insights 🏦
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/run-llama/sec-insights)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-SEC Insights uses the Retrieval Augmented Generation (RAG) capabilities of [LlamaIndex](https://github.com/jerryjliu/llama_index) to answer questions about SEC 10-K & 10-Q documents.
+TAX Insights uses the Retrieval Augmented Generation (RAG) capabilities of [LlamaIndex](https://github.com/jerryjliu/llama_index) to answer questions about SEC 10-K & 10-Q documents.
 
 You can start using the application now at [secinsights.ai](https://www.secinsights.ai/)
 

@@ -36,6 +36,7 @@ async def async_seed_db(
             output_dir=temp_dir,
             ciks=ciks,
             file_types=filing_types,
+            convert_to_pdf=False,  # Skip PDF conversion for local development
         )
 
         print("Copying downloaded SEC filings to S3")

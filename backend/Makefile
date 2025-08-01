@@ -6,14 +6,14 @@ run:
 
 run_docker:
 	echo "Running in local mode with docker."
-	docker compose up
+	docker compose up --build
 
 migrate:
 	echo "Running migrations."
 	docker compose create db
 	docker compose start db
 	poetry run python -m alembic upgrade head
-	# workaround for having PGVector create its tables
+	@echo "Creating PGVector tables..."
 	poetry run python -m scripts.build_vector_tables
 
 refresh_db:
@@ -56,6 +56,24 @@ setup_localstack:
 	awslocal s3api put-bucket-cors --bucket ${S3_ASSET_BUCKET_NAME} --cors-configuration file://./localstack-cors-config.json
 	echo "LocalStack S3 bucket website is ready. Open http://${S3_ASSET_BUCKET_NAME}.s3-website.localhost.localstack.cloud:4566 in your browser to verify."
 
+setup_localstack_windows:
+	@echo "Loading environment variables from .env..."
+	@powershell -Command "Get-Content .env | ForEach-Object { if($$_ -match '^([^=]+)=(.*)$$') { [Environment]::SetEnvironmentVariable($$matches[1], $$matches[2], 'Process') } }"
+	@set S3_ASSET_BUCKET_NAME=llama-app-web-assets-local
+	docker compose create localstack
+	docker compose start localstack
+	@echo "Waiting for localstack to start..."
+	@powershell -Command "do { Start-Sleep -Seconds 0.5; Write-Host -NoNewline '.'; } while ((Invoke-WebRequest -Uri 'http://localhost:4566/_localstack/health' -UseBasicParsing -ErrorAction SilentlyContinue).StatusCode -ne 200)"
+	@echo ""
+	@echo "LocalStack is ready!"
+	awslocal s3 mb s3://llama-app-web-assets-local
+	@echo ^<html^>LocalStack S3 bucket website is alive^</html^> > %TEMP%\index.html
+	awslocal s3 cp %TEMP%\index.html s3://llama-app-web-assets-local/index.html
+	@del %TEMP%\index.html
+	awslocal s3 website s3://llama-app-web-assets-local/ --index-document index.html
+	awslocal s3api put-bucket-cors --bucket llama-app-web-assets-local --cors-configuration file://./localstack-cors-config.json
+	@echo "LocalStack S3 bucket website is ready. Open http://llama-app-web-assets-local.s3-website.localhost.localstack.cloud:4566 in your browser to verify."
+
 seed_db_based_on_env:
 	# Call either seed_db or seed_db_preview, seed_db_local based on the environment
 	# This is used by the CI/CD pipeline
@@ -77,6 +95,13 @@ seed_db_preview:
 	echo "Seeding database for Preview."
 	# only need to populate with two companies for Preview
 	poetry run python scripts/seed_db.py  --ciks '["0001018724", "1326801"]'
+
+seed_db_local_windows:
+	echo "Seeding database for local."
+	docker compose create db
+	docker compose start db
+	make setup_localstack_windows
+	python scripts/seed_db.py --ciks '["0001018724", "1326801"]'  --filing_types '["10-K"]'
 
 seed_db_local:
 	echo "Seeding database for local."

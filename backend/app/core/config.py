@@ -19,7 +19,8 @@ is_pull_request: bool = os.environ.get("IS_PULL_REQUEST") == "true"
 is_preview_env: bool = os.environ.get("IS_PREVIEW_ENV") == "true"
 
 model_config = SettingsConfigDict(
-    env_prefix="PREVIEW_" if is_pull_request or is_preview_env else ""
+    env_prefix="PREVIEW_" if is_pull_request or is_preview_env else "",
+    env_file=".env"
 )
 
 class PreviewPrefixedSettings(BaseSettings):
@@ -47,7 +48,7 @@ class Settings(PreviewPrefixedSettings):
     """
     Application settings.
     """
-
+    
     PROJECT_NAME: str = "llama_app"
     API_PREFIX: str = "/api"
     DATABASE_URL: str

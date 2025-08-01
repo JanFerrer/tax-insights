@@ -1,5 +1,6 @@
 from typing import Dict, List, Optional
 import logging
+import os
 from pathlib import Path
 from datetime import datetime
 import s3fs
@@ -51,9 +52,33 @@ from app.chat.qa_response_synth import get_custom_response_synth
 logger = logging.getLogger(__name__)
 
 
+class S3FileSystemWrapper:
+    """Wrapper for S3 filesystem that ensures all paths use forward slashes on Windows."""
+    
+    def __init__(self, fs: AsyncFileSystem):
+        self.fs = fs
+    
+    def _normalize_path(self, path: str) -> str:
+        """Convert Windows backslashes to forward slashes for S3 compatibility."""
+        return path.replace("\\", "/")
+    
+    def __getattr__(self, name):
+        """Delegate all other attributes to the wrapped filesystem."""
+        attr = getattr(self.fs, name)
+        if callable(attr):
+            def wrapper(*args, **kwargs):
+                # Normalize any path arguments
+                args = tuple(self._normalize_path(arg) if isinstance(arg, str) and ('/' in arg or '\\' in arg) else arg for arg in args)
+                for key, value in kwargs.items():
+                    if isinstance(value, str) and ('/' in value or '\\' in value):
+                        kwargs[key] = self._normalize_path(value)
+                return attr(*args, **kwargs)
+            return wrapper
+        return attr
+
+
 logger.info("Applying nested asyncio patch")
 nest_asyncio.apply()
-
 
 
 def get_s3_fs() -> AsyncFileSystem:
@@ -64,7 +89,8 @@ def get_s3_fs() -> AsyncFileSystem:
     )
     if not (settings.RENDER or s3.exists(settings.S3_BUCKET_NAME)):
         s3.mkdir(settings.S3_BUCKET_NAME)
-    return s3
+    # Wrap the S3 filesystem to handle Windows path separators
+    return S3FileSystemWrapper(s3)
 
 
 def fetch_and_read_document(
@@ -75,7 +101,9 @@ def fetch_and_read_document(
     with TemporaryDirectory() as temp_dir:
         temp_file_path = Path(temp_dir) / f"{str(document.id)}.pdf"
         with open(temp_file_path, "wb") as temp_file:
-            with requests.get(document.url, stream=True) as r:
+            # Normalize Windows path separators in URL for web requests
+            normalized_url = document.url.replace("\\", "/")
+            with requests.get(normalized_url, stream=True) as r:
                 r.raise_for_status()
                 for chunk in r.iter_content(chunk_size=8192):
                     temp_file.write(chunk)
@@ -116,6 +144,8 @@ def get_storage_context(
     persist_dir: str, vector_store: VectorStore, fs: Optional[AsyncFileSystem] = None
 ) -> StorageContext:
     logger.info("Creating new storage context.")
+    # Ensure S3 paths use forward slashes, not Windows backslashes
+    persist_dir = persist_dir.replace("\\", "/")
     return StorageContext.from_defaults(
         persist_dir=persist_dir, vector_store=vector_store, fs=fs
     )
@@ -126,7 +156,8 @@ async def build_doc_id_to_index_map(
     documents: List[DocumentSchema],
     fs: Optional[AsyncFileSystem] = None,
 ) -> Dict[str, VectorStoreIndex]:
-    persist_dir = f"{settings.S3_BUCKET_NAME}"
+    # Ensure S3 paths use forward slashes, not Windows backslashes
+    persist_dir = f"{settings.S3_BUCKET_NAME}".replace("\\", "/")
 
     vector_store = await get_vector_store_singleton()
     try:

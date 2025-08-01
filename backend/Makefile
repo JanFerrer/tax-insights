@@ -58,7 +58,6 @@ setup_localstack:
 
 setup_localstack_windows:
 	@echo "Loading environment variables from .env..."
-	@powershell -Command "Get-Content .env | ForEach-Object { if($$_ -match '^([^=]+)=(.*)$$') { [Environment]::SetEnvironmentVariable($$matches[1], $$matches[2], 'Process') } }"
 	@set S3_ASSET_BUCKET_NAME=llama-app-web-assets-local
 	docker compose create localstack
 	docker compose start localstack

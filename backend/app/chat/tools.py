@@ -80,7 +80,9 @@ def describe_financials(financials: StockFinancial) -> str:
 
 def get_tool_metadata_for_document(doc: DocumentSchema) -> ToolMetadata:
     doc_title = build_title_for_document(doc)
-    name = f"extract_json_from_sec_document[{doc_title}]"
+    # Create a safe tool name by replacing problematic characters
+    safe_doc_title = doc_title.replace("(", "").replace(")", "").replace("[", "").replace("]", "").replace(",", "_").replace(" ", "_")
+    name = f"extract_json_from_sec_document_{safe_doc_title}"
     description = f"Returns basic financial data extracted from the SEC filing document {doc_title}"
     return ToolMetadata(
         name=name,

@@ -153,7 +153,7 @@ def get_api_query_engine_tool(
     doc_title = build_title_for_document(document)
     llm = Settings.llm.model_copy(
         update={"callback_manager": callback_manager},
-        deep=True
+        deep=False
     )
     agent = OpenAIAgent.from_tools(
         [polygon_io_tool],

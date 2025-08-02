@@ -99,7 +99,7 @@ class ChatCallbackHandler(BaseCallbackHandler):
         )
         metadata_map = metadata_map or None
         source = MessageSubProcessSourceEnum[event_type.name]
-        if self._send_chan._closed:
+        if hasattr(self._send_chan, "_closed") and self._send_chan._closed:
             logger.debug("Received event after send channel closed. Ignoring.")
             return
         try:
@@ -153,7 +153,7 @@ Remember - if I have asked a relevant financial question, use your tools.
         response_str = ""
         async for text in streaming_chat_response.async_response_gen():
             response_str += text
-            if send_chan._closed:
+            if hasattr(send_chan, "_closed") and send_chan._closed:
                 logger.debug(
                     "Received streamed token after send channel closed. Ignoring."
                 )
